@@ -1,0 +1,3 @@
+import { NextResponse, type NextRequest } from 'next/server';
+export function middleware(request: NextRequest) { const password = process.env.APP_PASSWORD; if (!password || request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/_next')) return NextResponse.next(); const authenticated = request.cookies.get('radar_auth')?.value === password; if (authenticated) return NextResponse.next(); if (request.nextUrl.pathname.startsWith('/api')) return NextResponse.json({ error: 'No autorizado' }, { status: 401 }); const url = request.nextUrl.clone(); url.pathname = '/login'; return NextResponse.redirect(url); }
+export const config = { matcher: ['/((?!favicon.ico).*)'] };

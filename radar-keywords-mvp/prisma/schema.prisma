@@ -1,0 +1,243 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum KeywordType {
+  keyword
+  hashtag
+}
+
+enum Language {
+  ES
+  DE
+  FR
+  NL
+  EN
+}
+
+enum Market {
+  Spain
+  DACH
+  France
+  Benelux
+  Global
+}
+
+enum Sector {
+  UV
+  DTF
+  Laser
+  Sublimation
+  Packaging
+  Retail
+  Signage
+  PromotionalProducts
+  Textile
+  Personalization
+}
+
+enum Priority {
+  high
+  medium
+  low
+}
+
+enum Frequency {
+  daily
+  twice_weekly
+  weekly
+  manual
+}
+
+enum KeywordStatus {
+  active
+  paused
+  archived
+}
+
+enum Platform {
+  instagram
+  facebook
+  linkedin
+  web
+  manual
+  unknown
+}
+
+enum MediaType {
+  image
+  video
+  carousel
+  text
+  unknown
+}
+
+enum PostStatus {
+  new
+  reviewed
+  useful
+  discarded
+  archived
+}
+
+enum RunStatus {
+  queued
+  running
+  success
+  partial_error
+  failed
+}
+
+enum TrendLevel {
+  low
+  medium
+  high
+}
+
+model Keyword {
+  id            String        @id @default(cuid())
+  term          String
+  type          KeywordType
+  language      Language
+  market        Market
+  sector        Sector
+  intent        String?
+  priority      Priority
+  frequency     Frequency
+  status        KeywordStatus @default(active)
+  lastRunAt     DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  postKeywords  PostKeyword[]
+  ingestionRuns IngestionRun[]
+
+  @@unique([term, language, market, sector])
+}
+
+model IngestionRun {
+  id              String    @id @default(cuid())
+  keywordId       String?
+  keyword         Keyword?  @relation(fields: [keywordId], references: [id], onDelete: SetNull)
+  providerName    String
+  startedAt       DateTime  @default(now())
+  finishedAt      DateTime?
+  status          RunStatus @default(queued)
+  candidatesFound Int       @default(0)
+  postsCreated    Int       @default(0)
+  postsUpdated    Int       @default(0)
+  duplicatesFound Int       @default(0)
+  errorMessage    String?
+  rawSummary      Json?
+
+  postKeywords PostKeyword[]
+}
+
+model Post {
+  id             String     @id @default(cuid())
+  platform       Platform
+  externalId     String?
+  canonicalUrl   String?
+  authorName     String?
+  authorUrl      String?
+  publishedAt    DateTime?
+  capturedAt     DateTime   @default(now())
+  captionText    String?
+  hashtags       Json?
+  mentions       Json?
+  externalLink   String?
+  thumbnailUrl   String?
+  mediaType      MediaType  @default(unknown)
+  visibleMetrics Json?
+  rawPayload     Json?
+  dedupeHash     String
+  status         PostStatus @default(new)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  postKeywords    PostKeyword[]
+  assets          PostAsset[]
+  classifications PostClassification[]
+  scores          PostScore[]
+  notes           PostNote[]
+
+  @@unique([canonicalUrl])
+  @@unique([platform, externalId])
+  @@index([dedupeHash])
+  @@index([status])
+}
+
+model PostKeyword {
+  id             String        @id @default(cuid())
+  postId         String
+  post           Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  keywordId      String
+  keyword        Keyword       @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+  ingestionRunId String?
+  ingestionRun   IngestionRun? @relation(fields: [ingestionRunId], references: [id], onDelete: SetNull)
+  matchedTerm    String
+  createdAt      DateTime      @default(now())
+
+  @@unique([postId, keywordId, matchedTerm])
+}
+
+model PostAsset {
+  id           String    @id @default(cuid())
+  postId       String
+  post         Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  url          String
+  type         MediaType @default(unknown)
+  thumbnailUrl String?
+  width        Int?
+  height       Int?
+  createdAt    DateTime @default(now())
+}
+
+model PostClassification {
+  id               String     @id @default(cuid())
+  postId           String
+  post             Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  languageDetected Language
+  marketDetected   Market
+  sector           Sector
+  productFamily    String?
+  topic            String?
+  format           String?
+  commercialIntent String?
+  editorialUse     String?
+  trendLevel       TrendLevel
+  confidence       Float
+  explanation      String
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+}
+
+model PostScore {
+  id                  String   @id @default(cuid())
+  postId              String
+  post                Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  relevanceScore      Int
+  commercialScore     Int
+  visualScore         Int
+  trendScore          Int
+  editorialScore      Int
+  marketPriorityScore Int
+  totalScore          Int
+  explanation         String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model PostNote {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  note      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

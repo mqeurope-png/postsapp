@@ -1,0 +1,2 @@
+import { z } from 'zod';
+export const keywordSchema = z.object({ term: z.string().min(1), type: z.enum(['keyword','hashtag']), language: z.enum(['ES','DE','FR','NL','EN']), market: z.enum(['Spain','DACH','France','Benelux','Global']), sector: z.enum(['UV','DTF','Laser','Sublimation','Packaging','Retail','Signage','PromotionalProducts','Textile','Personalization']), intent: z.string().optional(), priority: z.enum(['high','medium','low']), frequency: z.enum(['daily','twice_weekly','weekly','manual']), status: z.enum(['active','paused','archived']).default('active') });
