@@ -1,0 +1,4 @@
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+async function login(formData: FormData) { 'use server'; const password = String(formData.get('password')); if (password === process.env.APP_PASSWORD) { cookies().set('radar_auth', password, { httpOnly: true, sameSite: 'lax', path: '/' }); redirect('/'); } redirect('/login?error=1'); }
+export default function LoginPage({ searchParams }: { searchParams: { error?: string } }) { return <main className="mx-auto mt-24 max-w-md"><section className="card"><h1 className="mb-4 text-2xl font-bold">Acceso privado</h1><form action={login} className="space-y-4"><input type="password" name="password" className="input w-full" placeholder="Password" required/><button className="btn w-full">Entrar</button>{searchParams.error ? <p className="text-sm text-red-300">Password incorrecto.</p> : null}</form></section></main>; }

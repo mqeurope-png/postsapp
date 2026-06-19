@@ -1,0 +1,13 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: radar
+      POSTGRES_PASSWORD: radar
+      POSTGRES_DB: radar_keywords
+    ports:
+      - "5433:5432"
+    volumes:
+      - radar_postgres_data:/var/lib/postgresql/data
+volumes:
+  radar_postgres_data:

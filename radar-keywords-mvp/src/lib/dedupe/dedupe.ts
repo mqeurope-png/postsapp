@@ -1,0 +1,9 @@
+import { createHash } from 'node:crypto';
+import type { Post, PrismaClient } from '@prisma/client';
+import type { PostCandidate } from '../ingestion/types';
+export function normalizeUrl(url: string): string { const parsed = new URL(url); parsed.hash = ''; ['utm_source','utm_medium','utm_campaign','utm_term','utm_content','fbclid','gclid'].forEach((p)=>parsed.searchParams.delete(p)); return parsed.toString().replace(/\/$/, '').toLowerCase(); }
+export function safeNormalizeUrl(url?: string): string | undefined { if (!url) return undefined; try { return normalizeUrl(url); } catch { return url.trim().toLowerCase(); } }
+export function normalizeText(text = ''): string { return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/https?:\/\/\S+/g, '').replace(/[^\p{L}\p{N}#@]+/gu, ' ').replace(/\s+/g, ' ').trim(); }
+function day(value?: string) { if (!value) return ''; const d = new Date(value); return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10); }
+export function createDedupeHash(candidate: PostCandidate): string { const raw = [candidate.platform, normalizeText(candidate.authorName), normalizeText(candidate.captionText).slice(0, 220), day(candidate.publishedAt), safeNormalizeUrl(candidate.thumbnailUrl)].join('|'); return createHash('sha256').update(raw).digest('hex'); }
+export async function findDuplicate(prisma: PrismaClient, candidate: PostCandidate): Promise<Post | null> { const canonicalUrl = safeNormalizeUrl(candidate.canonicalUrl); if (canonicalUrl) { const byUrl = await prisma.post.findUnique({ where: { canonicalUrl } }); if (byUrl) return byUrl; } if (candidate.externalId) { const byExternal = await prisma.post.findUnique({ where: { platform_externalId: { platform: candidate.platform, externalId: candidate.externalId } } }); if (byExternal) return byExternal; } return prisma.post.findFirst({ where: { dedupeHash: createDedupeHash(candidate) } }); }

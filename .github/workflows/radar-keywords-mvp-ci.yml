@@ -1,0 +1,81 @@
+name: Radar Keywords MVP CI
+
+on:
+  push:
+    paths:
+      - 'radar-keywords-mvp/**'
+      - '.github/workflows/radar-keywords-mvp-ci.yml'
+  pull_request:
+    paths:
+      - 'radar-keywords-mvp/**'
+      - '.github/workflows/radar-keywords-mvp-ci.yml'
+
+jobs:
+  validate:
+    name: Validate Radar Keywords MVP
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: radar
+          POSTGRES_PASSWORD: radar
+          POSTGRES_DB: radar_keywords_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U radar -d radar_keywords_ci"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    defaults:
+      run:
+        working-directory: radar-keywords-mvp
+
+    env:
+      DATABASE_URL: postgresql://radar:radar@localhost:5432/radar_keywords_ci
+      APP_PASSWORD: ci-password
+      AI_PROVIDER: local
+      DEFAULT_INGESTION_PROVIDER: mock
+      OPENAI_API_KEY: ''
+      EXTERNAL_COLLECTOR_URL: ''
+      EXTERNAL_COLLECTOR_API_KEY: ''
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org/
+
+      - name: Force public npm registry
+        run: pnpm config set registry https://registry.npmjs.org/
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Apply database schema
+        run: pnpm db:migrate
+
+      - name: Seed database
+        run: pnpm db:seed
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Build app
+        run: pnpm build
