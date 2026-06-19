@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { toCsv } from '@/lib/csv/simple-csv';
 import { prisma } from '@/lib/db';

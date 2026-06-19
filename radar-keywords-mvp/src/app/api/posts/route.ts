@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 export async function GET(request: Request) { const url = new URL(request.url); const status = url.searchParams.get('status') ?? undefined; const minScore = Number(url.searchParams.get('minScore') ?? 0); const posts = await prisma.post.findMany({ where: { ...(status ? { status: status as never } : {}), scores: minScore ? { some: { totalScore: { gte: minScore } } } : undefined }, include: { postKeywords: { include: { keyword: true } }, classifications: { orderBy: { createdAt: 'desc' }, take: 1 }, scores: { orderBy: { createdAt: 'desc' }, take: 1 } }, orderBy: { capturedAt: 'desc' }, take: 100 }); return NextResponse.json(posts); }

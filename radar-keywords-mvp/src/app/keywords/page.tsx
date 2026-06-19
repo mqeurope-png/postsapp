@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { prisma } from '@/lib/db';
 async function createKeyword(formData: FormData) { 'use server'; await prisma.keyword.create({ data: { term: String(formData.get('term')), type: String(formData.get('type')) as never, language: String(formData.get('language')) as never, market: String(formData.get('market')) as never, sector: String(formData.get('sector')) as never, priority: String(formData.get('priority')) as never, frequency: 'manual', status: 'active' } }); }
 async function runKeyword(formData: FormData) { 'use server'; const { runKeywordSearchJob } = await import('@/lib/ingestion/run-keyword-search-job'); await runKeywordSearchJob({ keywordId: String(formData.get('id')), providerName: 'mock', limit: 6 }); }
